@@ -3,185 +3,212 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Halo AI ULTRA</title>
+<title>Halo AI Startup</title>
 
 <style>
-body {
-  margin: 0;
-  font-family: -apple-system, sans-serif;
-  background: #050505;
-  color: white;
-}
-
-.header {
-  padding: 16px;
-  text-align: center;
-  font-size: 22px;
-  font-weight: bold;
-}
-
-.container {
-  padding: 16px;
-}
-
-input {
-  width: 100%;
-  padding: 12px;
-  border-radius: 12px;
-  border: none;
-  margin-bottom: 10px;
-}
-
-button {
-  width: 100%;
-  padding: 14px;
-  border-radius: 12px;
-  border: none;
-  margin-bottom: 10px;
-  background: linear-gradient(45deg,#00ffcc,#00aaff);
-  font-weight: bold;
-}
-
-.grid {
-  display: grid;
-  gap: 16px;
-}
-
-.card {
-  background: #111;
-  border-radius: 16px;
-  padding: 12px;
-}
-
-iframe {
-  width: 100%;
-  height: 200px;
-  border: none;
-  border-radius: 10px;
-  background: white;
-}
-
-.actions {
-  display: flex;
-  gap: 6px;
-  margin-top: 8px;
-}
-
-.small-btn {
-  flex: 1;
-  padding: 8px;
-  font-size: 12px;
-  border-radius: 8px;
-  border: none;
-}
+body{margin:0;font-family:-apple-system;background:#050505;color:white}
+.header{padding:16px;text-align:center;font-size:22px;font-weight:bold}
+.container{padding:16px}
+input{width:100%;padding:12px;border-radius:12px;border:none;margin-bottom:10px}
+button{width:100%;padding:14px;border-radius:12px;border:none;margin-bottom:10px;background:linear-gradient(45deg,#00ffcc,#00aaff);font-weight:bold}
+.grid{display:grid;gap:16px}
+.card{background:#111;border-radius:16px;padding:12px}
+iframe{width:100%;height:220px;border:none;border-radius:10px;background:white}
+.actions{display:flex;gap:6px;margin-top:8px}
+.small{flex:1;padding:8px;font-size:12px;border-radius:8px;border:none}
+.topbar{display:flex;gap:6px}
 </style>
 </head>
 
 <body>
 
-<div class="header">🚀 Halo AI ULTRA</div>
+<div class="header">🚀 Halo AI Startup</div>
 
 <div class="container">
-<input id="key" placeholder="API key">
-<input id="prompt" placeholder="App idea (game, todo, chat...)">
-<button onclick="create()">Luo AI App</button>
+
+<div id="loginView">
+<input id="username" placeholder="Username">
+<button onclick="login()">Login</button>
+</div>
+
+<div id="appView" style="display:none">
+
+<input id="key" placeholder="API key (optional)">
+<input id="prompt" placeholder="Describe app...">
+<input id="search" placeholder="Search..." oninput="renderAll()">
+
+<div class="topbar">
+<button onclick="create()">Generate</button>
+<button onclick="logout()">Logout</button>
+</div>
 
 <div class="grid" id="apps"></div>
+
+</div>
 </div>
 
 <script>
-const appsDiv = document.getElementById("apps");
+let user = localStorage.getItem("halo_user");
 
-// load key
+if(user){
+loginSuccess();
+}
+
+function login(){
+const u = username.value;
+if(!u) return;
+localStorage.setItem("halo_user",u);
+loginSuccess();
+}
+
+function loginSuccess(){
+loginView.style.display="none";
+appView.style.display="block";
+loadApps();
+}
+
+function logout(){
+localStorage.removeItem("halo_user");
+location.reload();
+}
+
+// KEY
 key.value = localStorage.getItem("halo_key") || "";
-key.oninput = () => localStorage.setItem("halo_key", key.value);
+key.oninput = ()=>localStorage.setItem("halo_key",key.value);
 
-// load apps
-load();
+// DATA
+let apps = [];
 
-async function create() {
-  const card = newCard("⏳ Loading...");
-  appsDiv.prepend(card);
+function loadApps(){
+apps = JSON.parse(localStorage.getItem("halo_apps_"+user)||"[]");
+renderAll();
+}
 
-  try {
-    const res = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        "Authorization": "Bearer " + key.value,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "gpt-4.1-mini",
-        input: `
-Make a small mobile web app.
+function saveApps(){
+localStorage.setItem("halo_apps_"+user,JSON.stringify(apps));
+}
+
+// PROMPT
+function buildPrompt(p){
+return `
+Create a mobile web app.
 
 Rules:
 - HTML CSS JS only
 - no libraries
+- modern UI
 - interactive
-- clean UI
 - iframe safe
 
 ONLY CODE
 
-Idea: ${prompt.value}
-        `
-      })
-    });
-
-    const data = await res.json();
-    const code = data.output[0].content[0].text;
-
-    save(prompt.value, code);
-    render(card, prompt.value, code);
-
-  } catch {
-    card.innerHTML = "❌ Error";
-  }
+${p}
+`;
 }
 
-function newCard(text){
-  const d=document.createElement("div");
-  d.className="card";
-  d.innerHTML=text;
-  return d;
+// fallback
+function fallback(p){
+return `<h2>${p}</h2><button onclick="alert('Works')">Run</button>`;
 }
 
-function render(card,title,code){
-  card.innerHTML=`
-  <b>${title}</b>
-  <iframe srcdoc="${code.replace(/"/g,'&quot;')}"></iframe>
-  <div class="actions">
-    <button class="small-btn" onclick='downloadApp(${JSON.stringify(code)})'>⬇️</button>
-    <button class="small-btn" onclick='deleteApp(this)'>🗑️</button>
-  </div>`;
+// CREATE
+async function create(){
+const p = prompt.value;
+const k = key.value;
+
+const card = newCard("⏳...");
+appsDiv.prepend(card);
+
+let code;
+
+if(!k){
+code = fallback(p);
+}else{
+try{
+const res = await fetch("https://api.openai.com/v1/responses",{
+method:"POST",
+headers:{
+"Authorization":"Bearer "+k,
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+model:"gpt-4.1-mini",
+input: buildPrompt(p)
+})
+});
+
+const data = await res.json();
+code = data?.output?.[0]?.content?.[0]?.text || fallback(p);
+
+}catch{
+code = fallback(p);
+}
 }
 
-function save(title,code){
-  let arr=JSON.parse(localStorage.halo||"[]");
-  arr.unshift({title,code});
-  localStorage.halo=JSON.stringify(arr);
+apps.unshift({title:p,code,fav:false});
+saveApps();
+
+renderCard(card,p,code);
 }
 
-function load(){
-  let arr=JSON.parse(localStorage.halo||"[]");
-  arr.forEach(a=>{
-    const c=newCard("");
-    render(c,a.title,a.code);
-    appsDiv.appendChild(c);
-  });
+// UI
+const appsDiv = document.getElementById("apps");
+
+function newCard(t){
+const d=document.createElement("div");
+d.className="card";
+d.innerHTML=t;
+return d;
 }
 
-function deleteApp(btn){
-  btn.closest(".card").remove();
+function renderCard(card,title,code,fav=false){
+card.innerHTML=`
+<b>${title}</b>
+<iframe srcdoc="${escape(code)}"></iframe>
+
+<div class="actions">
+<button class="small" onclick='toggleFav(this)'>⭐</button>
+<button class="small" onclick='download(${JSON.stringify(code)})'>⬇️</button>
+<button class="small" onclick='remove(this)'>🗑️</button>
+</div>
+`;
 }
 
-function downloadApp(code){
-  const blob=new Blob([code],{type:"text/html"});
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download="app.html";
-  a.click();
+function renderAll(){
+appsDiv.innerHTML="";
+const q = search.value?.toLowerCase()||"";
+
+apps
+.filter(a=>a.title.toLowerCase().includes(q))
+.forEach(a=>{
+const c=newCard("");
+renderCard(c,a.title,a.code,a.fav);
+appsDiv.appendChild(c);
+});
+}
+
+// ACTIONS
+function remove(btn){
+const i=[...appsDiv.children].indexOf(btn.closest(".card"));
+apps.splice(i,1);
+saveApps();
+renderAll();
+}
+
+function toggleFav(btn){
+btn.style.background="gold";
+}
+
+function download(code){
+const blob=new Blob([code],{type:"text/html"});
+const a=document.createElement("a");
+a.href=URL.createObjectURL(blob);
+a.download="app.html";
+a.click();
+}
+
+function escape(s){
+return s.replace(/"/g,"&quot;");
 }
 </script>
 
