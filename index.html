@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Halo AI ULTRA</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: -apple-system, sans-serif;
+  background: #050505;
+  color: white;
+}
+
+.header {
+  padding: 16px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: bold;
+}
+
+.container {
+  padding: 16px;
+}
+
+input {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  margin-bottom: 10px;
+}
+
+button {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  margin-bottom: 10px;
+  background: linear-gradient(45deg,#00ffcc,#00aaff);
+  font-weight: bold;
+}
+
+.grid {
+  display: grid;
+  gap: 16px;
+}
+
+.card {
+  background: #111;
+  border-radius: 16px;
+  padding: 12px;
+}
+
+iframe {
+  width: 100%;
+  height: 200px;
+  border: none;
+  border-radius: 10px;
+  background: white;
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.small-btn {
+  flex: 1;
+  padding: 8px;
+  font-size: 12px;
+  border-radius: 8px;
+  border: none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">🚀 Halo AI ULTRA</div>
+
+<div class="container">
+<input id="key" placeholder="API key">
+<input id="prompt" placeholder="App idea (game, todo, chat...)">
+<button onclick="create()">Luo AI App</button>
+
+<div class="grid" id="apps"></div>
+</div>
+
+<script>
+const appsDiv = document.getElementById("apps");
+
+// load key
+key.value = localStorage.getItem("halo_key") || "";
+key.oninput = () => localStorage.setItem("halo_key", key.value);
+
+// load apps
+load();
+
+async function create() {
+  const card = newCard("⏳ Loading...");
+  appsDiv.prepend(card);
+
+  try {
+    const res = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + key.value,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "gpt-4.1-mini",
+        input: `
+Make a small mobile web app.
+
+Rules:
+- HTML CSS JS only
+- no libraries
+- interactive
+- clean UI
+- iframe safe
+
+ONLY CODE
+
+Idea: ${prompt.value}
+        `
+      })
+    });
+
+    const data = await res.json();
+    const code = data.output[0].content[0].text;
+
+    save(prompt.value, code);
+    render(card, prompt.value, code);
+
+  } catch {
+    card.innerHTML = "❌ Error";
+  }
+}
+
+function newCard(text){
+  const d=document.createElement("div");
+  d.className="card";
+  d.innerHTML=text;
+  return d;
+}
+
+function render(card,title,code){
+  card.innerHTML=`
+  <b>${title}</b>
+  <iframe srcdoc="${code.replace(/"/g,'&quot;')}"></iframe>
+  <div class="actions">
+    <button class="small-btn" onclick='downloadApp(${JSON.stringify(code)})'>⬇️</button>
+    <button class="small-btn" onclick='deleteApp(this)'>🗑️</button>
+  </div>`;
+}
+
+function save(title,code){
+  let arr=JSON.parse(localStorage.halo||"[]");
+  arr.unshift({title,code});
+  localStorage.halo=JSON.stringify(arr);
+}
+
+function load(){
+  let arr=JSON.parse(localStorage.halo||"[]");
+  arr.forEach(a=>{
+    const c=newCard("");
+    render(c,a.title,a.code);
+    appsDiv.appendChild(c);
+  });
+}
+
+function deleteApp(btn){
+  btn.closest(".card").remove();
+}
+
+function downloadApp(code){
+  const blob=new Blob([code],{type:"text/html"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="app.html";
+  a.click();
+}
+</script>
+
+</body>
+</html>
