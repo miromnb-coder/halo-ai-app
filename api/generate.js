@@ -1,3 +1,35 @@
 export default async function handler(req, res) {
-  res.status(200).json({ code: "<h1>Backend toimii 🔥</h1>" });
+  try {
+    const { prompt } = req.body;
+
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: "Return ONLY a full working HTML app. No explanation."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ]
+      })
+    });
+
+    const data = await response.json();
+
+    res.status(200).json({
+      code: data.choices?.[0]?.message?.content || "<h1>Error</h1>"
+    });
+
+  } catch (err) {
+    res.status(500).json({ code: "<h1>Server error</h1>" });
+  }
 }
