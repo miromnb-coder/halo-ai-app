@@ -3,123 +3,93 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Halo AI Startup</title>
+<title>Halo AI Store 🌍</title>
 
 <style>
-body{margin:0;font-family:-apple-system;background:#050505;color:white}
+body{margin:0;font-family:-apple-system;background:#0a0a0a;color:white}
 .header{padding:16px;text-align:center;font-size:22px;font-weight:bold}
 .container{padding:16px}
-input{width:100%;padding:12px;border-radius:12px;border:none;margin-bottom:10px}
+input{width:100%;padding:14px;border-radius:12px;border:none;margin-bottom:10px}
 button{width:100%;padding:14px;border-radius:12px;border:none;margin-bottom:10px;background:linear-gradient(45deg,#00ffcc,#00aaff);font-weight:bold}
 .grid{display:grid;gap:16px}
 .card{background:#111;border-radius:16px;padding:12px}
 iframe{width:100%;height:220px;border:none;border-radius:10px;background:white}
-.actions{display:flex;gap:6px;margin-top:8px}
-.small{flex:1;padding:8px;font-size:12px;border-radius:8px;border:none}
-.topbar{display:flex;gap:6px}
+.small{padding:10px;font-size:12px;margin-top:5px}
 </style>
-</head>
 
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+</head>
 <body>
 
-<div class="header">🚀 Halo AI Startup</div>
+<div class="header">🌍 Halo AI App Store</div>
 
 <div class="container">
 
-<div id="loginView">
-<input id="username" placeholder="Username">
-<button onclick="login()">Login</button>
-</div>
+<input id="key" placeholder="OpenAI API key (optional)">
+<input id="prompt" placeholder="Describe your app">
 
-<div id="appView" style="display:none">
-
-<input id="key" placeholder="API key (optional)">
-<input id="prompt" placeholder="Describe app...">
-<input id="search" placeholder="Search..." oninput="renderAll()">
-
-<div class="topbar">
-<button onclick="create()">Generate</button>
-<button onclick="logout()">Logout</button>
-</div>
+<button onclick="create()">🚀 Generate</button>
+<button onclick="openStore()">🏪 Store</button>
 
 <div class="grid" id="apps"></div>
 
 </div>
-</div>
 
 <script>
-let user = localStorage.getItem("halo_user");
 
-if(user){
-loginSuccess();
+// 🔥 PASTE YOUR REAL CONFIG HERE
+const firebaseConfig = {
+  apiKey: "AIzaSyA1HffNu5gW2tq4n881-64OiVXhxlGrThg",
+  authDomain: "halo-ai-store.firebaseapp.com",
+  projectId: "halo-ai-store"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+const appsDiv = document.getElementById("apps");
+
+// 🔗 OPEN SHARED APP
+const params = new URLSearchParams(location.search);
+const id = params.get("id");
+
+if(id){
+loadApp(id);
 }
 
-function login(){
-const u = username.value;
-if(!u) return;
-localStorage.setItem("halo_user",u);
-loginSuccess();
-}
-
-function loginSuccess(){
-loginView.style.display="none";
-appView.style.display="block";
-loadApps();
-}
-
-function logout(){
-localStorage.removeItem("halo_user");
-location.reload();
-}
-
-// KEY
-key.value = localStorage.getItem("halo_key") || "";
-key.oninput = ()=>localStorage.setItem("halo_key",key.value);
-
-// DATA
-let apps = [];
-
-function loadApps(){
-apps = JSON.parse(localStorage.getItem("halo_apps_"+user)||"[]");
-renderAll();
-}
-
-function saveApps(){
-localStorage.setItem("halo_apps_"+user,JSON.stringify(apps));
-}
-
-// PROMPT
-function buildPrompt(p){
-return `
-Create a mobile web app.
-
-Rules:
-- HTML CSS JS only
-- no libraries
-- modern UI
-- interactive
-- iframe safe
-
-ONLY CODE
-
-${p}
+async function loadApp(id){
+const doc = await db.collection("apps").doc(id).get();
+if(doc.exists){
+document.body.innerHTML = `
+<iframe style="width:100%;height:100vh;border:none"
+srcdoc="${doc.data().code}"></iframe>
 `;
+}
 }
 
 // fallback
 function fallback(p){
+if(p.includes("todo")){
+return `<input placeholder="Task" onkeydown="if(event.key==='Enter'){this.nextElementSibling.innerHTML+='<li>'+this.value+'</li>';this.value=''}"><ul></ul>`;
+}
 return `<h2>${p}</h2><button onclick="alert('Works')">Run</button>`;
 }
 
 // CREATE
 async function create(){
-const p = prompt.value;
+
+const p = (prompt.value || "demo app").toLowerCase();
 const k = key.value;
 
-const card = newCard("⏳...");
+const card = document.createElement("div");
+card.className="card";
+card.innerHTML="⏳ Generating...";
 appsDiv.prepend(card);
 
-let code;
+let code = "";
 
 if(!k){
 code = fallback(p);
@@ -133,83 +103,89 @@ headers:{
 },
 body:JSON.stringify({
 model:"gpt-4.1-mini",
-input: buildPrompt(p)
+input:`Create a small mobile web app. Only code. ${p}`
 })
 });
 
 const data = await res.json();
-code = data?.output?.[0]?.content?.[0]?.text || fallback(p);
+
+code =
+data?.output?.[0]?.content?.[0]?.text ||
+data?.output_text ||
+fallback(p);
 
 }catch{
 code = fallback(p);
 }
 }
 
-apps.unshift({title:p,code,fav:false});
-saveApps();
+// render
+card.innerHTML = `
+<b>${p}</b>
+<iframe srcdoc="${escapeHtml(code)}"></iframe>
 
-renderCard(card,p,code);
-}
-
-// UI
-const appsDiv = document.getElementById("apps");
-
-function newCard(t){
-const d=document.createElement("div");
-d.className="card";
-d.innerHTML=t;
-return d;
-}
-
-function renderCard(card,title,code,fav=false){
-card.innerHTML=`
-<b>${title}</b>
-<iframe srcdoc="${escape(code)}"></iframe>
-
-<div class="actions">
-<button class="small" onclick='toggleFav(this)'>⭐</button>
-<button class="small" onclick='download(${JSON.stringify(code)})'>⬇️</button>
-<button class="small" onclick='remove(this)'>🗑️</button>
-</div>
+<button onclick='publish(${JSON.stringify(code)}, "${p}")'>🌍 Publish</button>
 `;
 }
 
-function renderAll(){
-appsDiv.innerHTML="";
-const q = search.value?.toLowerCase()||"";
+// 🌍 PUBLISH
+async function publish(code,title){
 
-apps
-.filter(a=>a.title.toLowerCase().includes(q))
-.forEach(a=>{
-const c=newCard("");
-renderCard(c,a.title,a.code,a.fav);
+const id = Date.now().toString();
+
+await db.collection("apps").doc(id).set({
+title,
+code,
+created: Date.now()
+});
+
+const url = location.origin + location.pathname + "?id=" + id;
+
+alert("App published! Copy link:");
+prompt("Link:", url);
+}
+
+// 🏪 STORE
+async function openStore(){
+
+appsDiv.innerHTML="<h2>🌍 App Store</h2>";
+
+const snap = await db.collection("apps")
+.orderBy("created","desc")
+.get();
+
+snap.forEach(doc=>{
+
+const app = doc.data();
+
+const c = document.createElement("div");
+c.className="card";
+
+c.innerHTML=`
+<b>${app.title}</b>
+<iframe srcdoc="${escapeHtml(app.code)}"></iframe>
+<button onclick="openApp('${doc.id}')">Open</button>
+`;
+
 appsDiv.appendChild(c);
+
 });
 }
 
-// ACTIONS
-function remove(btn){
-const i=[...appsDiv.children].indexOf(btn.closest(".card"));
-apps.splice(i,1);
-saveApps();
-renderAll();
+// open
+function openApp(id){
+location.search="?id="+id;
 }
 
-function toggleFav(btn){
-btn.style.background="gold";
+// safe html
+function escapeHtml(str){
+return String(str)
+.replace(/&/g,"&amp;")
+.replace(/</g,"&lt;")
+.replace(/>/g,"&gt;")
+.replace(/"/g,"&quot;");
 }
 
-function download(code){
-const blob=new Blob([code],{type:"text/html"});
-const a=document.createElement("a");
-a.href=URL.createObjectURL(blob);
-a.download="app.html";
-a.click();
-}
-
-function escape(s){
-return s.replace(/"/g,"&quot;");
-}
 </script>
 
 </body>
