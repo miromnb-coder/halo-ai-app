@@ -1,218 +1,139 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fi">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Halo AI</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>🚀 Halo AI</title>
 
 <style>
-* { box-sizing: border-box; }
-
 body {
   margin: 0;
-  font-family: -apple-system, system-ui;
-  background: radial-gradient(circle at top, #1a1a2e, #000);
+  font-family: -apple-system, sans-serif;
+  background: radial-gradient(circle at top, #0a0f2c, #000);
   color: white;
 }
 
-/* HEADER */
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px;
+.container {
+  max-width: 600px;
+  margin: auto;
+  padding: 20px;
 }
 
-.logo {
+.title {
+  font-size: 28px;
   font-weight: bold;
-  font-size: 18px;
+  margin-top: 20px;
 }
 
-.avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+.subtitle {
+  opacity: 0.7;
+  margin-bottom: 20px;
+}
+
+.chat {
+  margin-top: 20px;
+}
+
+.message {
+  padding: 12px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  max-width: 80%;
+}
+
+.user {
+  background: #1e90ff;
+  margin-left: auto;
+}
+
+.ai {
   background: #222;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
-/* HERO */
-.hero {
-  text-align: center;
-  padding: 30px 20px 10px;
-}
-
-.hero h1 {
-  font-size: 22px;
-  opacity: 0.9;
-}
-
-/* INPUT */
 .input-box {
-  margin: 15px;
-  background: rgba(255,255,255,0.05);
-  border-radius: 30px;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: black;
   padding: 10px;
   display: flex;
   gap: 10px;
-  align-items: center;
 }
 
-.input-box input {
+input {
   flex: 1;
-  background: transparent;
-  border: none;
-  color: white;
-  font-size: 16px;
-  outline: none;
-}
-
-/* BUTTON */
-.send {
-  background: linear-gradient(135deg, #00f5d4, #00bbf9);
-  border: none;
-  border-radius: 50%;
-  width: 45px;
-  height: 45px;
-  font-weight: bold;
-}
-
-/* TABS */
-.tabs {
-  display: flex;
-  gap: 10px;
-  padding: 10px 15px;
-}
-
-.tab {
-  padding: 10px 15px;
-  border-radius: 15px;
-  border: 1px solid #333;
-  font-size: 13px;
-}
-
-/* CARD */
-.card {
-  margin: 15px;
-  padding: 15px;
-  background: #111;
+  padding: 12px;
   border-radius: 20px;
-}
-
-.run-btn {
-  margin-top: 10px;
-  background: #222;
   border: none;
-  padding: 10px;
-  border-radius: 10px;
-  color: white;
 }
 
-/* STATUS */
-.status {
-  margin: 10px 15px;
-  padding: 10px;
-  background: #111;
-  border-radius: 10px;
-  opacity: 0.8;
+button {
+  background: linear-gradient(45deg, #00d4ff, #00ffa3);
+  border: none;
+  padding: 12px 16px;
+  border-radius: 50%;
+  font-size: 18px;
 }
 </style>
 </head>
 
 <body>
 
-<!-- HEADER -->
-<div class="header">
-  <div class="logo">🚀 Halo</div>
-  <div class="avatar">M</div>
+<div class="container">
+  <div class="title">🚀 Halo AI</div>
+  <div class="subtitle">AI App Builder (real backend)</div>
+
+  <div id="chat" class="chat"></div>
 </div>
 
-<!-- HERO -->
-<div class="hero">
-  <h1>Ready to build?</h1>
-</div>
-
-<!-- INPUT -->
 <div class="input-box">
-  <input id="prompt" placeholder="Ask Halo to create an app..." />
-  <button class="send" onclick="generate()">↑</button>
+  <input id="input" placeholder="Describe your app..." />
+  <button onclick="sendMessage()">↑</button>
 </div>
-
-<!-- TABS -->
-<div class="tabs">
-  <div class="tab">Recent</div>
-  <div class="tab">Projects</div>
-  <div class="tab">Templates</div>
-</div>
-
-<!-- STATUS -->
-<div id="status"></div>
-
-<!-- APPS -->
-<div id="apps"></div>
 
 <script>
-async function generate() {
-  let prompt = document.getElementById("prompt").value;
-  let status = document.getElementById("status");
+const chat = document.getElementById("chat");
 
-  if (!prompt) return;
+function addMessage(text, type) {
+  const div = document.createElement("div");
+  div.className = "message " + type;
+  div.innerText = text;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
 
-  status.innerHTML = `<div class="status">Thinking...</div>`;
+async function sendMessage() {
+  const input = document.getElementById("input");
+  const message = input.value;
+
+  if (!message) return;
+
+  addMessage(message, "user");
+  input.value = "";
+
+  addMessage("Thinking...", "ai");
 
   try {
-    // 🔥 Jos backend on valmis, käytetään sitä
-    let res = await fetch("https://YOUR-VERCEL-URL/api/generate", {
+    const res = await fetch("/api/chat", {
       method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({ prompt })
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ message }),
     });
 
-    let data = await res.json();
+    const data = await res.json();
 
-    addApp(prompt, data.code);
+    document.querySelectorAll(".ai").forEach(e => {
+      if (e.innerText === "Thinking...") {
+        e.innerText = data.reply;
+      }
+    });
 
-    status.innerHTML = `<div class="status">Updated ✅</div>`;
-
-  } catch (e) {
-    // 🔥 fallback jos backend ei vielä ole
-    let fakeCode = `
-    <html>
-    <body style="font-family:sans-serif;text-align:center">
-      <h1>${prompt}</h1>
-      <p>This is a demo app.</p>
-    </body>
-    </html>
-    `;
-
-    addApp(prompt, fakeCode);
-
-    status.innerHTML = `<div class="status">Demo mode (no backend)</div>`;
+  } catch (err) {
+    addMessage("❌ Error connecting to AI", "ai");
   }
-}
-
-function addApp(prompt, code) {
-  let card = document.createElement("div");
-  card.className = "card";
-
-  card.innerHTML = `
-    <h3>${prompt}</h3>
-    <button class="run-btn" onclick="runApp(this)">Run</button>
-    <pre style="display:none">${escapeHtml(code)}</pre>
-  `;
-
-  document.getElementById("apps").prepend(card);
-}
-
-function runApp(btn) {
-  let code = btn.parentElement.querySelector("pre").innerText;
-  let win = window.open();
-  win.document.write(code);
-}
-
-function escapeHtml(text) {
-  return text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 </script>
 
