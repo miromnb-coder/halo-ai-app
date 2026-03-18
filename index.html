@@ -3,53 +3,44 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Halo AI Startup 🚀</title>
+<title>Halo AI Builder 🔥</title>
 
 <style>
 body{margin:0;font-family:-apple-system;background:#0a0a0a;color:white}
 .app{display:flex;flex-direction:column;height:100vh}
 
 /* header */
-.header{padding:12px;background:#111;text-align:center;font-weight:bold}
-
-/* builder tools */
-.tools{display:flex;gap:8px;padding:8px;background:#111;overflow:auto}
-.tool{background:#222;padding:8px;border-radius:10px}
+.header{padding:14px;text-align:center;font-size:20px;font-weight:bold;background:#111}
 
 /* chat */
 .chat{flex:1;overflow:auto;padding:10px}
 .msg{padding:10px;border-radius:12px;margin-bottom:8px;max-width:80%}
-.user{background:#00aaff;align-self:flex-end}
+.user{background:#00aaff;margin-left:auto}
 .ai{background:#222}
 
 /* preview */
-.preview{height:40%}
+.preview{height:45%;border-top:1px solid #222}
 iframe{width:100%;height:100%;border:none;background:white}
 
 /* input */
-.inputBar{display:flex;padding:8px;background:#111;gap:6px}
-input{flex:1;padding:10px;border-radius:10px;border:none}
-button{padding:10px;border-radius:10px;border:none;background:linear-gradient(45deg,#00ffcc,#00aaff)}
+.inputBar{display:flex;padding:10px;background:#111;gap:6px}
+input{flex:1;padding:12px;border-radius:12px;border:none}
+button{padding:12px;border-radius:12px;border:none;background:linear-gradient(45deg,#00ffcc,#00aaff)}
 
+/* store cards */
 .card{background:#111;padding:10px;border-radius:12px;margin-bottom:10px}
 </style>
 
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 
 </head>
 <body>
 
 <div class="app">
 
-<div class="header">🚀 Halo AI Startup</div>
-
-<div class="tools">
-<button onclick="newApp()">🆕</button>
-<button onclick="publish()">🌍</button>
-<button onclick="openStore()">🏪</button>
-</div>
+<div class="header">🚀 Halo AI Builder</div>
 
 <div class="chat" id="chat"></div>
 
@@ -58,8 +49,11 @@ button{padding:10px;border-radius:10px;border:none;background:linear-gradient(45
 </div>
 
 <div class="inputBar">
-<input id="input" placeholder="Describe or edit app...">
+<input id="keyInput" placeholder="API key (optional)">
+<input id="input" placeholder="Describe app...">
 <button onclick="send()">Send</button>
+<button onclick="publish()">🌍</button>
+<button onclick="openStore()">🏪</button>
 </div>
 
 </div>
@@ -75,20 +69,10 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-const auth = firebase.auth();
-
-// 👤 LOGIN (anonymous)
-auth.signInAnonymously();
 
 // state
 let history=[];
 let currentCode="";
-let userId="";
-
-// get user
-auth.onAuthStateChanged(u=>{
-if(u) userId = u.uid;
-});
 
 // refs
 const chat=document.getElementById("chat");
@@ -108,13 +92,22 @@ function render(){
 view.srcdoc=currentCode;
 }
 
-// fallback
+// fallback UI
 function fallback(p){
-return `<h2>${p}</h2><button onclick="alert('ok')">Run</button>`;
+return `
+<div style="font-family:sans-serif;padding:20px">
+<h2>${p}</h2>
+<input placeholder="Type..." style="padding:10px;border-radius:8px;width:100%">
+<button style="margin-top:10px;padding:12px;border:none;border-radius:10px;background:#007aff;color:white">
+Start
+</button>
+</div>
+`;
 }
 
-// AI builder
+// 🔥 AI BUILDER
 async function send(){
+
 const text=input.value;
 if(!text)return;
 
@@ -124,38 +117,53 @@ history.push(text);
 
 msg("Thinking...","ai");
 
+const key = keyInput.value;
+
 let code="";
 
+if(!key){
+code=fallback(text);
+}else{
 try{
 const res=await fetch("https://api.openai.com/v1/responses",{
 method:"POST",
 headers:{
-"Authorization":"Bearer "+localStorage.getItem("key"),
+"Authorization":"Bearer "+key,
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
 model:"gpt-4.1-mini",
 input:`
-You are a professional app builder.
+You are an elite mobile app designer.
 
-Conversation:
+RULES:
+- Return ONLY HTML
+- Create a real mobile UI
+- Use buttons, inputs, layout
+- Use inline CSS
+- Make it modern (iOS style)
+- NO plain text pages
+- NO links as main content
+
+Build this app:
 ${history.join("\n")}
-
-Create or update a modern mobile app UI.
-Return ONLY HTML.
 `
 })
 });
 
 const data=await res.json();
 
-code=
-data?.output?.[0]?.content?.[0]?.text||
-data?.output_text||
+code =
+data?.output?.[0]?.content?.[0]?.text ||
+data?.output_text ||
 fallback(text);
+
+// fix markdown
+code = code.replace(/```html|```/g,"");
 
 }catch{
 code=fallback(text);
+}
 }
 
 currentCode=code;
@@ -164,58 +172,40 @@ render();
 msg("Updated ✅","ai");
 }
 
-// publish
+// 🌍 publish
 async function publish(){
 
 if(!currentCode)return alert("No app");
 
-const title = prompt("App name?");
 const id=Date.now().toString();
 
 await db.collection("apps").doc(id).set({
-title:title||"Untitled",
 code:currentCode,
-likes:0,
-created:Date.now(),
-user:userId
+created:Date.now()
 });
 
 const url=location.origin+location.pathname+"?id="+id;
-prompt("Share:",url);
-}
 
-// ❤️ like
-async function like(id){
-const ref = db.collection("apps").doc(id);
-await ref.update({
-likes: firebase.firestore.FieldValue.increment(1)
-});
-openStore();
+prompt("Share link:",url);
 }
 
 // 🏪 store
 async function openStore(){
 
-chat.innerHTML="<h2>🔥 Trending Apps</h2>";
+chat.innerHTML="<h2>🌍 App Store</h2>";
 
 const snap=await db.collection("apps")
-.orderBy("likes","desc")
-.limit(20)
+.orderBy("created","desc")
 .get();
 
 snap.forEach(doc=>{
-
-const app=doc.data();
 
 const c=document.createElement("div");
 c.className="card";
 
 c.innerHTML=`
-<b>${app.title}</b><br>
-❤️ ${app.likes}
-<br>
+App<br>
 <button onclick="openApp('${doc.id}')">Open</button>
-<button onclick="like('${doc.id}')">Like</button>
 `;
 
 chat.appendChild(c);
@@ -226,13 +216,6 @@ chat.appendChild(c);
 // open
 function openApp(id){
 location.search="?id="+id;
-}
-
-// new
-function newApp(){
-history=[];
-currentCode="<h2>New App</h2>";
-render();
 }
 
 // load shared
@@ -250,10 +233,6 @@ render();
 
 // init
 render();
-
-// save key
-const k=prompt("Paste OpenAI API key (optional)");
-if(k)localStorage.setItem("key",k);
 
 </script>
 
