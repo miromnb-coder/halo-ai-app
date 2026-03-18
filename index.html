@@ -1,239 +1,219 @@
 <!DOCTYPE html>
-<html lang="fi">
+<html lang="en">
 <head>
-<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Halo AI Builder 🔥</title>
+<title>Halo AI</title>
 
 <style>
-body{margin:0;font-family:-apple-system;background:#0a0a0a;color:white}
-.app{display:flex;flex-direction:column;height:100vh}
+* { box-sizing: border-box; }
 
-/* header */
-.header{padding:14px;text-align:center;font-size:20px;font-weight:bold;background:#111}
+body {
+  margin: 0;
+  font-family: -apple-system, system-ui;
+  background: radial-gradient(circle at top, #1a1a2e, #000);
+  color: white;
+}
 
-/* chat */
-.chat{flex:1;overflow:auto;padding:10px}
-.msg{padding:10px;border-radius:12px;margin-bottom:8px;max-width:80%}
-.user{background:#00aaff;margin-left:auto}
-.ai{background:#222}
+/* HEADER */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+}
 
-/* preview */
-.preview{height:45%;border-top:1px solid #222}
-iframe{width:100%;height:100%;border:none;background:white}
+.logo {
+  font-weight: bold;
+  font-size: 18px;
+}
 
-/* input */
-.inputBar{display:flex;padding:10px;background:#111;gap:6px}
-input{flex:1;padding:12px;border-radius:12px;border:none}
-button{padding:12px;border-radius:12px;border:none;background:linear-gradient(45deg,#00ffcc,#00aaff)}
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #222;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-/* store cards */
-.card{background:#111;padding:10px;border-radius:12px;margin-bottom:10px}
+/* HERO */
+.hero {
+  text-align: center;
+  padding: 30px 20px 10px;
+}
+
+.hero h1 {
+  font-size: 22px;
+  opacity: 0.9;
+}
+
+/* INPUT */
+.input-box {
+  margin: 15px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 30px;
+  padding: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.input-box input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 16px;
+  outline: none;
+}
+
+/* BUTTON */
+.send {
+  background: linear-gradient(135deg, #00f5d4, #00bbf9);
+  border: none;
+  border-radius: 50%;
+  width: 45px;
+  height: 45px;
+  font-weight: bold;
+}
+
+/* TABS */
+.tabs {
+  display: flex;
+  gap: 10px;
+  padding: 10px 15px;
+}
+
+.tab {
+  padding: 10px 15px;
+  border-radius: 15px;
+  border: 1px solid #333;
+  font-size: 13px;
+}
+
+/* CARD */
+.card {
+  margin: 15px;
+  padding: 15px;
+  background: #111;
+  border-radius: 20px;
+}
+
+.run-btn {
+  margin-top: 10px;
+  background: #222;
+  border: none;
+  padding: 10px;
+  border-radius: 10px;
+  color: white;
+}
+
+/* STATUS */
+.status {
+  margin: 10px 15px;
+  padding: 10px;
+  background: #111;
+  border-radius: 10px;
+  opacity: 0.8;
+}
 </style>
-
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-
 </head>
+
 <body>
 
-<div class="app">
-
-<div class="header">🚀 Halo AI Builder</div>
-
-<div class="chat" id="chat"></div>
-
-<div class="preview">
-<iframe id="view"></iframe>
+<!-- HEADER -->
+<div class="header">
+  <div class="logo">🚀 Halo</div>
+  <div class="avatar">M</div>
 </div>
 
-<div class="inputBar">
-<input id="keyInput" placeholder="API key (optional)">
-<input id="input" placeholder="Describe app...">
-<button onclick="send()">Send</button>
-<button onclick="publish()">🌍</button>
-<button onclick="openStore()">🏪</button>
+<!-- HERO -->
+<div class="hero">
+  <h1>Ready to build?</h1>
 </div>
 
+<!-- INPUT -->
+<div class="input-box">
+  <input id="prompt" placeholder="Ask Halo to create an app..." />
+  <button class="send" onclick="generate()">↑</button>
 </div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab">Recent</div>
+  <div class="tab">Projects</div>
+  <div class="tab">Templates</div>
+</div>
+
+<!-- STATUS -->
+<div id="status"></div>
+
+<!-- APPS -->
+<div id="apps"></div>
 
 <script>
+async function generate() {
+  let prompt = document.getElementById("prompt").value;
+  let status = document.getElementById("status");
 
-// 🔥 FIREBASE CONFIG
-const firebaseConfig = {
-  apiKey:"PASTE",
-  authDomain:"PASTE",
-  projectId:"halo-ai-store"
-};
+  if (!prompt) return;
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+  status.innerHTML = `<div class="status">Thinking...</div>`;
 
-// state
-let history=[];
-let currentCode="";
+  try {
+    // 🔥 Jos backend on valmis, käytetään sitä
+    let res = await fetch("https://YOUR-VERCEL-URL/api/generate", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ prompt })
+    });
 
-// refs
-const chat=document.getElementById("chat");
-const view=document.getElementById("view");
+    let data = await res.json();
 
-// UI
-function msg(t,type){
-const d=document.createElement("div");
-d.className="msg "+type;
-d.innerText=t;
-chat.appendChild(d);
-chat.scrollTop=chat.scrollHeight;
+    addApp(prompt, data.code);
+
+    status.innerHTML = `<div class="status">Updated ✅</div>`;
+
+  } catch (e) {
+    // 🔥 fallback jos backend ei vielä ole
+    let fakeCode = `
+    <html>
+    <body style="font-family:sans-serif;text-align:center">
+      <h1>${prompt}</h1>
+      <p>This is a demo app.</p>
+    </body>
+    </html>
+    `;
+
+    addApp(prompt, fakeCode);
+
+    status.innerHTML = `<div class="status">Demo mode (no backend)</div>`;
+  }
 }
 
-// render
-function render(){
-view.srcdoc=currentCode;
+function addApp(prompt, code) {
+  let card = document.createElement("div");
+  card.className = "card";
+
+  card.innerHTML = `
+    <h3>${prompt}</h3>
+    <button class="run-btn" onclick="runApp(this)">Run</button>
+    <pre style="display:none">${escapeHtml(code)}</pre>
+  `;
+
+  document.getElementById("apps").prepend(card);
 }
 
-// fallback UI
-function fallback(p){
-return `
-<div style="font-family:sans-serif;padding:20px">
-<h2>${p}</h2>
-<input placeholder="Type..." style="padding:10px;border-radius:8px;width:100%">
-<button style="margin-top:10px;padding:12px;border:none;border-radius:10px;background:#007aff;color:white">
-Start
-</button>
-</div>
-`;
+function runApp(btn) {
+  let code = btn.parentElement.querySelector("pre").innerText;
+  let win = window.open();
+  win.document.write(code);
 }
 
-// 🔥 AI BUILDER
-async function send(){
-
-const text=input.value;
-if(!text)return;
-
-msg(text,"user");
-input.value="";
-history.push(text);
-
-msg("Thinking...","ai");
-
-const key = keyInput.value;
-
-let code="";
-
-if(!key){
-code=fallback(text);
-}else{
-try{
-const res=await fetch("https://api.openai.com/v1/responses",{
-method:"POST",
-headers:{
-"Authorization":"Bearer "+key,
-"Content-Type":"application/json"
-},
-body:JSON.stringify({
-model:"gpt-4.1-mini",
-input:`
-You are an elite mobile app designer.
-
-RULES:
-- Return ONLY HTML
-- Create a real mobile UI
-- Use buttons, inputs, layout
-- Use inline CSS
-- Make it modern (iOS style)
-- NO plain text pages
-- NO links as main content
-
-Build this app:
-${history.join("\n")}
-`
-})
-});
-
-const data=await res.json();
-
-code =
-data?.output?.[0]?.content?.[0]?.text ||
-data?.output_text ||
-fallback(text);
-
-// fix markdown
-code = code.replace(/```html|```/g,"");
-
-}catch{
-code=fallback(text);
+function escapeHtml(text) {
+  return text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
-}
-
-currentCode=code;
-render();
-
-msg("Updated ✅","ai");
-}
-
-// 🌍 publish
-async function publish(){
-
-if(!currentCode)return alert("No app");
-
-const id=Date.now().toString();
-
-await db.collection("apps").doc(id).set({
-code:currentCode,
-created:Date.now()
-});
-
-const url=location.origin+location.pathname+"?id="+id;
-
-prompt("Share link:",url);
-}
-
-// 🏪 store
-async function openStore(){
-
-chat.innerHTML="<h2>🌍 App Store</h2>";
-
-const snap=await db.collection("apps")
-.orderBy("created","desc")
-.get();
-
-snap.forEach(doc=>{
-
-const c=document.createElement("div");
-c.className="card";
-
-c.innerHTML=`
-App<br>
-<button onclick="openApp('${doc.id}')">Open</button>
-`;
-
-chat.appendChild(c);
-
-});
-}
-
-// open
-function openApp(id){
-location.search="?id="+id;
-}
-
-// load shared
-const params=new URLSearchParams(location.search);
-const id=params.get("id");
-
-if(id){
-db.collection("apps").doc(id).get().then(doc=>{
-if(doc.exists){
-currentCode=doc.data().code;
-render();
-}
-});
-}
-
-// init
-render();
-
 </script>
 
 </body>
