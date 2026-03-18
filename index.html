@@ -3,171 +3,222 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Halo AI Store 🌍</title>
+<title>Halo AI Startup 🚀</title>
 
 <style>
 body{margin:0;font-family:-apple-system;background:#0a0a0a;color:white}
-.header{padding:16px;text-align:center;font-size:22px;font-weight:bold}
-.container{padding:16px}
-input{width:100%;padding:14px;border-radius:12px;border:none;margin-bottom:10px}
-button{width:100%;padding:14px;border-radius:12px;border:none;margin-bottom:10px;background:linear-gradient(45deg,#00ffcc,#00aaff);font-weight:bold}
-.grid{display:grid;gap:16px}
-.card{background:#111;border-radius:16px;padding:12px}
-iframe{width:100%;height:220px;border:none;border-radius:10px;background:white}
-.small{padding:10px;font-size:12px;margin-top:5px}
+.app{display:flex;flex-direction:column;height:100vh}
+
+/* header */
+.header{padding:12px;background:#111;text-align:center;font-weight:bold}
+
+/* builder tools */
+.tools{display:flex;gap:8px;padding:8px;background:#111;overflow:auto}
+.tool{background:#222;padding:8px;border-radius:10px}
+
+/* chat */
+.chat{flex:1;overflow:auto;padding:10px}
+.msg{padding:10px;border-radius:12px;margin-bottom:8px;max-width:80%}
+.user{background:#00aaff;align-self:flex-end}
+.ai{background:#222}
+
+/* preview */
+.preview{height:40%}
+iframe{width:100%;height:100%;border:none;background:white}
+
+/* input */
+.inputBar{display:flex;padding:8px;background:#111;gap:6px}
+input{flex:1;padding:10px;border-radius:10px;border:none}
+button{padding:10px;border-radius:10px;border:none;background:linear-gradient(45deg,#00ffcc,#00aaff)}
+
+.card{background:#111;padding:10px;border-radius:12px;margin-bottom:10px}
 </style>
 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 
 </head>
 <body>
 
-<div class="header">🌍 Halo AI App Store</div>
+<div class="app">
 
-<div class="container">
+<div class="header">🚀 Halo AI Startup</div>
 
-<input id="key" placeholder="OpenAI API key (optional)">
-<input id="prompt" placeholder="Describe your app">
+<div class="tools">
+<button onclick="newApp()">🆕</button>
+<button onclick="publish()">🌍</button>
+<button onclick="openStore()">🏪</button>
+</div>
 
-<button onclick="create()">🚀 Generate</button>
-<button onclick="openStore()">🏪 Store</button>
+<div class="chat" id="chat"></div>
 
-<div class="grid" id="apps"></div>
+<div class="preview">
+<iframe id="view"></iframe>
+</div>
+
+<div class="inputBar">
+<input id="input" placeholder="Describe or edit app...">
+<button onclick="send()">Send</button>
+</div>
 
 </div>
 
 <script>
 
-// 🔥 PASTE YOUR REAL CONFIG HERE
+// 🔥 FIREBASE CONFIG
 const firebaseConfig = {
-  apiKey: "AIzaSyA1HffNu5gW2tq4n881-64OiVXhxlGrThg",
-  authDomain: "halo-ai-store.firebaseapp.com",
-  projectId: "halo-ai-store"
+  apiKey:"PASTE",
+  authDomain:"PASTE",
+  projectId:"halo-ai-store"
 };
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const auth = firebase.auth();
 
-const appsDiv = document.getElementById("apps");
+// 👤 LOGIN (anonymous)
+auth.signInAnonymously();
 
-// 🔗 OPEN SHARED APP
-const params = new URLSearchParams(location.search);
-const id = params.get("id");
+// state
+let history=[];
+let currentCode="";
+let userId="";
 
-if(id){
-loadApp(id);
+// get user
+auth.onAuthStateChanged(u=>{
+if(u) userId = u.uid;
+});
+
+// refs
+const chat=document.getElementById("chat");
+const view=document.getElementById("view");
+
+// UI
+function msg(t,type){
+const d=document.createElement("div");
+d.className="msg "+type;
+d.innerText=t;
+chat.appendChild(d);
+chat.scrollTop=chat.scrollHeight;
 }
 
-async function loadApp(id){
-const doc = await db.collection("apps").doc(id).get();
-if(doc.exists){
-document.body.innerHTML = `
-<iframe style="width:100%;height:100vh;border:none"
-srcdoc="${doc.data().code}"></iframe>
-`;
-}
+// render
+function render(){
+view.srcdoc=currentCode;
 }
 
 // fallback
 function fallback(p){
-if(p.includes("todo")){
-return `<input placeholder="Task" onkeydown="if(event.key==='Enter'){this.nextElementSibling.innerHTML+='<li>'+this.value+'</li>';this.value=''}"><ul></ul>`;
-}
-return `<h2>${p}</h2><button onclick="alert('Works')">Run</button>`;
+return `<h2>${p}</h2><button onclick="alert('ok')">Run</button>`;
 }
 
-// CREATE
-async function create(){
+// AI builder
+async function send(){
+const text=input.value;
+if(!text)return;
 
-const p = (prompt.value || "demo app").toLowerCase();
-const k = key.value;
+msg(text,"user");
+input.value="";
+history.push(text);
 
-const card = document.createElement("div");
-card.className="card";
-card.innerHTML="⏳ Generating...";
-appsDiv.prepend(card);
+msg("Thinking...","ai");
 
-let code = "";
+let code="";
 
-if(!k){
-code = fallback(p);
-}else{
 try{
-const res = await fetch("https://api.openai.com/v1/responses",{
+const res=await fetch("https://api.openai.com/v1/responses",{
 method:"POST",
 headers:{
-"Authorization":"Bearer "+k,
+"Authorization":"Bearer "+localStorage.getItem("key"),
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
 model:"gpt-4.1-mini",
-input:`Create a small mobile web app. Only code. ${p}`
+input:`
+You are a professional app builder.
+
+Conversation:
+${history.join("\n")}
+
+Create or update a modern mobile app UI.
+Return ONLY HTML.
+`
 })
 });
 
-const data = await res.json();
+const data=await res.json();
 
-code =
-data?.output?.[0]?.content?.[0]?.text ||
-data?.output_text ||
-fallback(p);
+code=
+data?.output?.[0]?.content?.[0]?.text||
+data?.output_text||
+fallback(text);
 
 }catch{
-code = fallback(p);
-}
-}
-
-// render
-card.innerHTML = `
-<b>${p}</b>
-<iframe srcdoc="${escapeHtml(code)}"></iframe>
-
-<button onclick='publish(${JSON.stringify(code)}, "${p}")'>🌍 Publish</button>
-`;
+code=fallback(text);
 }
 
-// 🌍 PUBLISH
-async function publish(code,title){
+currentCode=code;
+render();
 
-const id = Date.now().toString();
+msg("Updated ✅","ai");
+}
+
+// publish
+async function publish(){
+
+if(!currentCode)return alert("No app");
+
+const title = prompt("App name?");
+const id=Date.now().toString();
 
 await db.collection("apps").doc(id).set({
-title,
-code,
-created: Date.now()
+title:title||"Untitled",
+code:currentCode,
+likes:0,
+created:Date.now(),
+user:userId
 });
 
-const url = location.origin + location.pathname + "?id=" + id;
-
-alert("App published! Copy link:");
-prompt("Link:", url);
+const url=location.origin+location.pathname+"?id="+id;
+prompt("Share:",url);
 }
 
-// 🏪 STORE
+// ❤️ like
+async function like(id){
+const ref = db.collection("apps").doc(id);
+await ref.update({
+likes: firebase.firestore.FieldValue.increment(1)
+});
+openStore();
+}
+
+// 🏪 store
 async function openStore(){
 
-appsDiv.innerHTML="<h2>🌍 App Store</h2>";
+chat.innerHTML="<h2>🔥 Trending Apps</h2>";
 
-const snap = await db.collection("apps")
-.orderBy("created","desc")
+const snap=await db.collection("apps")
+.orderBy("likes","desc")
+.limit(20)
 .get();
 
 snap.forEach(doc=>{
 
-const app = doc.data();
+const app=doc.data();
 
-const c = document.createElement("div");
+const c=document.createElement("div");
 c.className="card";
 
 c.innerHTML=`
-<b>${app.title}</b>
-<iframe srcdoc="${escapeHtml(app.code)}"></iframe>
+<b>${app.title}</b><br>
+❤️ ${app.likes}
+<br>
 <button onclick="openApp('${doc.id}')">Open</button>
+<button onclick="like('${doc.id}')">Like</button>
 `;
 
-appsDiv.appendChild(c);
+chat.appendChild(c);
 
 });
 }
@@ -177,14 +228,32 @@ function openApp(id){
 location.search="?id="+id;
 }
 
-// safe html
-function escapeHtml(str){
-return String(str)
-.replace(/&/g,"&amp;")
-.replace(/</g,"&lt;")
-.replace(/>/g,"&gt;")
-.replace(/"/g,"&quot;");
+// new
+function newApp(){
+history=[];
+currentCode="<h2>New App</h2>";
+render();
 }
+
+// load shared
+const params=new URLSearchParams(location.search);
+const id=params.get("id");
+
+if(id){
+db.collection("apps").doc(id).get().then(doc=>{
+if(doc.exists){
+currentCode=doc.data().code;
+render();
+}
+});
+}
+
+// init
+render();
+
+// save key
+const k=prompt("Paste OpenAI API key (optional)");
+if(k)localStorage.setItem("key",k);
 
 </script>
 
