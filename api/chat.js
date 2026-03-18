@@ -2,18 +2,28 @@ export default async function handler(req, res) {
   try {
     const { message } = req.body;
 
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const response = await fetch("https://api.deepseek.com/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        "Authorization": `Bearer ${process.env.DEEPSEEK_API_KEY}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "openchat/openchat-7b", // 🔥 VAIHDETTU TÄHÄN
+        model: "deepseek-chat",
         messages: [
           {
             role: "system",
-            content: "Vastaa aina suomeksi."
+            content: `
+Olet AI App Builder.
+
+Kun käyttäjä antaa idean:
+- luo pieni toimiva sovellus
+- käytä HTML + CSS + JavaScript
+- tee moderni UI
+- tee mobiiliystävällinen
+- EI selityksiä
+- PALAUTA VAIN KOODI
+`
           },
           {
             role: "user",
@@ -25,23 +35,15 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    console.log("FULL:", data);
-
-    if (data.error) {
-      return res.status(200).json({
-        reply: "AI virhe: " + data.error.message
-      });
-    }
-
     const reply =
       data?.choices?.[0]?.message?.content ||
-      "AI ei vastannut.";
+      "<div>Virhe appin luomisessa</div>";
 
     res.status(200).json({ reply });
 
   } catch (err) {
     res.status(500).json({
-      reply: "Server error: " + err.message
+      reply: "<div>Server error</div>"
     });
   }
 }
