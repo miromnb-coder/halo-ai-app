@@ -16,13 +16,9 @@ export default async function handler(req, res) {
             content: `
 Olet AI App Builder.
 
-Kun käyttäjä antaa idean:
-- luo pieni toimiva sovellus
-- käytä HTML + CSS + JavaScript
-- tee moderni UI
-- tee mobiiliystävällinen
-- EI selityksiä
-- PALAUTA VAIN KOODI
+Luo pieni toimiva mobiilisovellus.
+Palauta VAIN HTML + CSS + JS.
+EI selityksiä.
 `
           },
           {
@@ -35,15 +31,40 @@ Kun käyttäjä antaa idean:
 
     const data = await response.json();
 
-    const reply =
-      data?.choices?.[0]?.message?.content ||
-      "<div>Virhe appin luomisessa</div>";
+    console.log("DEEPSEEK FULL:", data);
+
+    // 🔥 PARSING FIX
+    let reply = null;
+
+    if (data?.choices?.[0]?.message?.content) {
+      reply = data.choices[0].message.content;
+    }
+
+    // 🔥 jos API antaa virheen → näytä se
+    if (data?.error) {
+      reply = "<div>❌ AI virhe: " + data.error.message + "</div>";
+    }
+
+    // 🔥 fallback ettei hajoa
+    if (!reply) {
+      reply = `
+<div style="padding:20px;font-family:sans-serif">
+<h3>⚠️ AI ei vastannut</h3>
+<p>Tarkista:</p>
+<ul>
+<li>API key oikein</li>
+<li>Vercel redeploy tehty</li>
+<li>DeepSeek toimii</li>
+</ul>
+</div>
+`;
+    }
 
     res.status(200).json({ reply });
 
   } catch (err) {
     res.status(500).json({
-      reply: "<div>Server error</div>"
+      reply: "<div>Server error: " + err.message + "</div>"
     });
   }
 }
