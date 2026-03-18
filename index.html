@@ -3,77 +3,32 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Halo AI</title>
-
-<link rel="manifest" href="manifest.json">
+<title>Halo App Builder</title>
 
 <style>
 body {
   margin: 0;
   font-family: -apple-system, sans-serif;
-  background: black;
+  background: #020617;
   color: white;
-  overflow: hidden;
 }
 
-/* 🌌 tausta */
-canvas {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: -1;
-}
-
-/* 🤖 orb */
-#orb {
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  margin: 20px auto;
-  background: radial-gradient(circle, #22c55e, #06b6d4);
-  box-shadow: 0 0 40px #22c55e;
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-  100% { transform: scale(1); }
-}
-
-/* chat */
-#chat {
-  position: absolute;
-  bottom: 80px;
-  width: 100%;
-  padding: 10px;
-  max-height: 50%;
-  overflow-y: auto;
-}
-
-.msg {
-  margin: 6px;
-  padding: 12px;
-  border-radius: 16px;
-  max-width: 80%;
-}
-
-.user {
-  background: #3b82f6;
-  margin-left: auto;
-}
-
-.ai {
-  background: rgba(255,255,255,0.1);
+/* header */
+header {
+  padding: 20px;
+  font-size: 24px;
+  font-weight: bold;
+  text-align: center;
+  background: linear-gradient(90deg,#22c55e,#06b6d4);
+  -webkit-background-clip: text;
+  color: transparent;
 }
 
 /* input */
 #inputArea {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
   display: flex;
   padding: 10px;
+  gap: 10px;
 }
 
 input {
@@ -84,123 +39,78 @@ input {
 }
 
 button {
-  margin-left: 10px;
-  border-radius: 50%;
-  border: none;
   padding: 14px;
+  border-radius: 20px;
+  border: none;
+  background: linear-gradient(135deg,#22c55e,#06b6d4);
+  color: white;
+  font-weight: bold;
+}
+
+/* apps grid */
+#apps {
+  padding: 10px;
+  display: grid;
+  gap: 15px;
+}
+
+/* card */
+.card {
+  background: rgba(255,255,255,0.05);
+  border-radius: 20px;
+  padding: 10px;
+  box-shadow: 0 0 20px rgba(34,197,94,0.2);
+}
+
+iframe {
+  width: 100%;
+  height: 300px;
+  border: none;
+  border-radius: 12px;
 }
 </style>
 </head>
 
 <body>
 
-<canvas id="bg"></canvas>
-
-<div id="orb"></div>
-
-<div id="chat"></div>
+<header>🚀 Halo App Builder</header>
 
 <div id="inputArea">
-  <input id="input" placeholder="Kysy..." />
-  <button onclick="send()">➤</button>
-  <button onclick="voice()">🎤</button>
+  <input id="input" placeholder="Tee sovellus idea..." />
+  <button onclick="createApp()">Luo</button>
 </div>
 
+<div id="apps"></div>
+
 <script>
-// 🌌 particles
-const canvas = document.getElementById("bg");
-const ctx = canvas.getContext("2d");
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-
-let particles = [];
-for (let i = 0; i < 60; i++) {
-  particles.push({
-    x: Math.random() * canvas.width,
-    y: Math.random() * canvas.height,
-    r: Math.random() * 2
-  });
-}
-
-function draw() {
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  particles.forEach(p => {
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
-    ctx.fillStyle = "#22c55e";
-    ctx.fill();
-    p.y += 0.3;
-    if (p.y > canvas.height) p.y = 0;
-  });
-  requestAnimationFrame(draw);
-}
-draw();
-
-// chat
-const chat = document.getElementById("chat");
-
-function msg(text, type) {
-  const d = document.createElement("div");
-  d.className = "msg " + type;
-  d.textContent = text;
-  chat.appendChild(d);
-  chat.scrollTop = chat.scrollHeight;
-}
-
-// 🧠 nimi
-let name = localStorage.getItem("name");
-
-if (!name) {
-  msg("Hei 👋 Mikä sinun nimi on?", "ai");
-} else {
-  msg("Tervetuloa takaisin " + name, "ai");
-}
-
-async function send() {
+async function createApp() {
   const input = document.getElementById("input");
-  const text = input.value;
-  if (!text) return;
+  const idea = input.value;
 
-  msg(text, "user");
+  if (!idea) return;
+
   input.value = "";
-
-  if (!name) {
-    name = text;
-    localStorage.setItem("name", name);
-    msg("Mahtavaa tavata, " + name + " 😎", "ai");
-    return;
-  }
 
   const res = await fetch("/api/chat", {
     method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({ message: text })
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ message: idea })
   });
 
   const data = await res.json();
 
-  msg(data.reply, "ai");
-  speak(data.reply);
+  showApp(data.reply);
 }
 
-// 🎤
-function voice() {
-  const r = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-  r.lang = "fi-FI";
-  r.onresult = e => send(e.results[0][0].transcript);
-  r.start();
-}
+function showApp(code) {
+  const card = document.createElement("div");
+  card.className = "card";
 
-// 🔊
-function speak(t) {
-  const u = new SpeechSynthesisUtterance(t);
-  u.lang = "fi-FI";
-  speechSynthesis.speak(u);
-}
+  const iframe = document.createElement("iframe");
+  iframe.srcdoc = code;
 
-// 📱 PWA install
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("sw.js");
+  card.appendChild(iframe);
+  document.getElementById("apps").prepend(card);
 }
 </script>
 
