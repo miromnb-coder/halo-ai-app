@@ -10,6 +10,7 @@ export default async function handler(req, res) {
 
     if (!chats[userId]) chats[userId] = [];
 
+    // Tallenna käyttäjän viesti
     chats[userId].push({ role: "user", content: message });
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -19,15 +20,33 @@ export default async function handler(req, res) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "meta-llama/llama-3-8b-instruct",
-        messages: chats[userId]
+        model: "mistralai/mistral-7b-instruct", // 🔥 parempi ilmainen malli
+        messages: [
+          {
+            role: "system",
+            content: `
+Vastaa aina suomeksi.
+Ole selkeä, fiksu ja hyödyllinen.
+Pidä vastaukset lyhyinä mutta hyvänä.
+Selitä asiat yksinkertaisesti.
+Älä käytä muita kieliä.
+`
+          },
+          ...chats[userId]
+        ]
       })
     });
 
     const data = await response.json();
 
-    const reply = data.choices?.[0]?.message?.content || "Ei vastausta";
+    console.log("FULL RESPONSE:", data);
 
+    let reply =
+      data?.choices?.[0]?.message?.content ||
+      data?.choices?.[0]?.text ||
+      "En saanut vastausta.";
+
+    // Tallenna AI vastaus
     chats[userId].push({ role: "assistant", content: reply });
 
     res.status(200).json({ reply });
